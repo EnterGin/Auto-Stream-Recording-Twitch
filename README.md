@@ -1,4 +1,4 @@
-# Auto-Stream-Recording-Twitch
+# Auto Stream Recording Twitch
 Python script for auto recording streams.
 Thanks for source script to [junian](https://gist.github.com/junian/b41dd8e544bf0e3980c971b0d015f5f6)
 
