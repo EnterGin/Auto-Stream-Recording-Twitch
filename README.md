@@ -11,7 +11,7 @@ Thanks for source script to [junian](https://gist.github.com/junian/b41dd8e544bf
 
 # Features
 
-* Recording streams automatically using streamlink without delay (stream will not be cut at the beginning)
+* Recording live streams automatically using streamlink without delay (stream will not be cut at the beginning)
 * Recording chat using Twitch Chat Downloader
 * Converting streams using FFmpeg [(thanks to Twitch Leecher)](https://github.com/Franiac/TwitchLeecher)
 * Creating folders for each stream
