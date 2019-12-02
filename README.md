@@ -21,5 +21,5 @@ Thanks for source script to [junian](https://gist.github.com/junian/b41dd8e544bf
 1. Install python 3
 2. Instal Twitch Chat Downloader and Streamlink
 3. Download ffmpeg
-4. Download script and open it using notepad
+4. Download script and open it using notepad++ (it is much better)
 5. Change options to preferred
