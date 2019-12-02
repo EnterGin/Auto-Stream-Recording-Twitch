@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.1 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.1.1 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -50,9 +50,9 @@ class TwitchRecorder:
         if(os.path.isdir(self.processed_path) is False):
             os.makedirs(self.processed_path)
 
-        # make sure the interval to check user availability is not less than 15 seconds
-        if(self.refresh < 0):
-            print("Check interval should not be lower than 0 seconds.")
+        # make sure the interval to check user availability is not less than 1 seconds
+        if(self.refresh < 1):
+            print("Check interval should not be lower than 1 seconds.")
             self.refresh = 1
             print("System set check interval to 1 seconds.")
         
@@ -74,17 +74,15 @@ class TwitchRecorder:
                             os.chdir(self.ffmpeg_path)
                             processing_window = "cmd.exe /c start".split() + self.cmdstatecommand
                             subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path,f)])
-                            #os.remove(recorded_filename)
                         except Exception as e:
                             print(e)
                     elif(os.path.exists(os.path.join(stream_dir_path,f)) is False):
                         recorded_filename = os.path.join(self.recorded_path, f)
                         processing_window = "cmd.exe /c start".split() + self.cmdstatecommand
                         subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path,f)])
-                        #os.remove(recorded_filename)
-                    else:
+                    elif self.cleanrecorded == 1:
                         recorded_filename = os.path.join(self.recorded_path, f)
-                        #os.remove(recorded_filename)
+                        os.remove(recorded_filename)
                 else:
                     recorded_filename = os.path.join(self.recorded_path, f)
                     dirname = f[:8] + f[26:]
@@ -98,13 +96,11 @@ class TwitchRecorder:
                             os.chdir(self.ffmpeg_path)
                             processing_window = "cmd.exe /c start".split() + self.cmdstatecommand
                             subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path,f)])
-                            #os.remove(recorded_filename)
                         except Exception as e:
                             print(e)
                     elif(os.path.exists(os.path.join(stream_dir_path, f)) is False):
                         processing_window = "cmd.exe /c start".split() + self.cmdstatecommand
                         subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path,f)])
-                        #os.remove(recorded_filename)
                     elif self.cleanrecorded == 1:
                         recorded_filename = os.path.join(self.recorded_path, f)
                         os.remove(recorded_filename)
@@ -119,7 +115,7 @@ class TwitchRecorder:
         # 1: offline, 
         # 2: not found, 
         # 3: error
-        #curl -H "Accept: application/vnd.twitchtv.v5+json" -H "Client-ID: kimne78kx3ncx6brgo4mv6wki5h1ko" -X GET https://api.twitch.tv/kraken/channels/62241502/videos?broadcast_type=archive
+        
         url = 'https://api.twitch.tv/kraken/channels/' + self.username
         info = None
         status = 3
@@ -148,13 +144,7 @@ class TwitchRecorder:
                 print(self.username, "currently offline, checking again in", self.refresh, "seconds.")
                 time.sleep(self.refresh)
             elif status == 0:
-                #print(self.username, "online. Stream recording in session.")         ################################
-                # filename = self.username + " - " + datetime.datetime.now().strftime("%Y-%m-%d %Hh%Mm%Ss") + " - " + (info['stream']).get("channel").get("status") + ".mp4"
-                if info['game'] == None:
-                    filename = datetime.datetime.now().strftime("%Y%m%d %Hh%Mm%Ss") + " _ " + self.username + " _ " + str(info['status']) + ' _ ' + 'None' + ".mp4"
-                else:
-                    filename = datetime.datetime.now().strftime("%Y%m%d %Hh%Mm%Ss") + " _ " + self.username + " _ " + str(info['status']) + ' _ ' + str(info['game']) + ".mp4"
-                    
+                filename = datetime.datetime.now().strftime("%Y%m%d %Hh%Mm%Ss") + " _ " + self.username + " _ " + str(info['status']) + ' _ ' + str(info['game']) + ".mp4"
                 present_date=datetime.datetime.now().strftime("%Y%m%d")
                 
                 # clean filename from unecessary characters
@@ -172,21 +162,15 @@ class TwitchRecorder:
                         vods = requests.get(vodurl, headers = {"Accept" : 'application/vnd.twitchtv.v5+json', "Client-ID" : self.client_id}, timeout = 1)
                         vodsinfodic = json.loads(vods.text)
                         if vodsinfodic["_total"] > 0:
-                            #print (vodsinfodic)
                             vod_id = vodsinfodic["videos"][0]["_id"]
                             vod_id = vod_id[:0] + vod_id[1:]
                             created_at = vodsinfodic["videos"][0]["created_at"]
-                            #created_day = created_at[:4] + created_at[5:]
-                            #created_day = created_day[:6] + created_day[7:]
-                            #created_day = created_day[:8]
                             created_day = present_date
                             created_time_hour = created_at[11:]
                             created_time_hour = created_time_hour[:2]
                             created_time_hourTimezone = int(created_time_hour)+self.timezone
                             if created_time_hourTimezone >= 24:
                                 created_time_hourTimezone -= 24
-                                #created_day = int(created_day)+1
-                                #created_day = str(created_day)
                             elif created_time_hourTimezone < 0:
                                 created_time_hourTimezone += 24
                             if created_time_hourTimezone < 10:
@@ -201,12 +185,9 @@ class TwitchRecorder:
                             filename = "".join(x for x in filename if x.isalnum() or x in [" ", "-", "_", ".", "(", ")"])
                             os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
                             recorded_filename=os.path.join(self.recorded_path, filename)
-                            #vod_filename="VOD-" + filename
                             if self.chatdownload == 1:
                                 subtitles_window = "cmd.exe /c start".split() + self.cmdstatecommand
                                 subprocess.call(subtitles_window + ["tcd", "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path])
-                            #VOD downloading
-                            #subprocess.call(["streamlink", "--twitch-oauth-token", self.oauth_token, "twitch.tv/videos/" + vod_id, self.quality, "-o", os.path.join(self.recorded_path,vod_filename)])
                         else:
                             processed_stream_path = self.processed_path + "/" + filename[:-4]
                             if(os.path.isdir(processed_stream_path) is False):
@@ -217,14 +198,9 @@ class TwitchRecorder:
                 print("Recording stream is done. Fixing video file.")
                 if(os.path.exists(recorded_filename) is True):
                     try:
-                    #filename = datetime.datetime.now().strftime("%Y%m%d %Hh%Mm%Ss") + " - " + self.username + " - " + (info['stream']).get("channel").get("status") + ".mp4"
-                    #filename = "".join(x for x in filename if x.isalnum() or x in [" ", "-", "_", "."])
                         os.chdir(self.ffmpeg_path)
                         processing_window = "cmd.exe /c start".split() + self.cmdstatecommand
                         subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(processed_stream_path,filename)])
-                        #processing_window_vod = "cmd.exe /c start".split()
-                        #subprocess.call(processing_window_vod + ['ffmpeg', '-y', '-i', os.path.join(self.recorded_path,vod_filename), '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(processed_stream_path,vod_filename)])
-                        #os.remove(os.path.join(self.recorded_path,vod_filename))
                     except Exception as e:
                         print(e)
                 else:
