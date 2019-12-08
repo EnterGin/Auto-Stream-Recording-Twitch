@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.1.2 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.1.3 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -14,7 +14,7 @@ class TwitchRecorder:
     
         # global configuration
         self.client_id = "kimne78kx3ncx6brgo4mv6wki5h1ko" # Don't change this
-        self.oauth_token = '*************************' # get oauth token value by typing `streamlink --twitch-oauth-authenticate` in terminal
+        self.oauth_token = '*********************' # get oauth token value by typing `streamlink --twitch-oauth-authenticate` in terminal
         self.ffmpeg_path = 'D:\\twitch' # path to ffmpeg.exe
         self.refresh = 1.0 # Time between checking (1.0 is recommended)
         self.root_path = "D:\\twitch" # path to recorded and processed streams
@@ -63,9 +63,9 @@ class TwitchRecorder:
             if(len(video_list) > 0):
                 print('Fixing previously recorded files.')
             for f in video_list:
-                if f[8] == ' ':
+                if f[11] == 'h':
                     dirname = f[:-4]
-                    dirname = "".join(x for x in dirname if x.isalnum() or x in [" ", "-", "_", ".","[","]","!","(",")"])
+                    dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                     stream_dir_path = self.processed_path + '/' + dirname
                     if(os.path.isdir(stream_dir_path) is False):
                         os.makedirs(stream_dir_path)
@@ -88,7 +88,7 @@ class TwitchRecorder:
                     recorded_filename = os.path.join(self.recorded_path, f)
                     dirname = f[:8] + f[26:]
                     dirname = dirname[:-4]
-                    dirname = "".join(x for x in dirname if x.isalnum() or x in [" ", "-", "_", ".","[","]","!","(",")"])
+                    dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                     stream_dir_path = self.processed_path + '/' + dirname
                     if(os.path.isdir(stream_dir_path) is False):
                         os.makedirs(stream_dir_path)
@@ -150,7 +150,7 @@ class TwitchRecorder:
                 present_date=datetime.datetime.now().strftime("%Y%m%d")
                 
                 # clean filename from unecessary characters
-                filename = "".join(x for x in filename if x.isalnum() or x in [" ", "-", "_", ".","[","]","!","(",")"])
+                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                 
                 recorded_filename = os.path.join(self.recorded_path, filename)
                 
@@ -181,12 +181,12 @@ class TwitchRecorder:
                             created_time_minutes = created_time_minutes[:3]
                             created_time = "(" + str(created_time_hourTimezone) + "-" + created_time_minutes + ")"
                             processed_stream_folder = created_day + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
-                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or x in [" ", "-", "_", ".","[","]","!","(",")"])
+                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                             processed_stream_path = self.processed_path + "/" + processed_stream_folder
                             if(os.path.isdir(processed_stream_path) is False):
                                 os.makedirs(processed_stream_path)
                             filename = created_day + "_" + created_time + "_" + vod_id + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
-                            filename = "".join(x for x in filename if x.isalnum() or x in [" ", "-", "_", ".", "(", ")","[","]","!"])
+                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                             os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
                             recorded_filename=os.path.join(self.recorded_path, filename)
                             if self.chatdownload == 1:
