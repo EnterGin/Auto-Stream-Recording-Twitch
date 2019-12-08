@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.1.3 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.1.4 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -11,18 +11,25 @@ import getopt
 
 class TwitchRecorder:
     def __init__(self):
-    
+        
+        # deleting previous processed streams from recorded folder
+        print('Do you want to delete previous processed streams from recorded folder? y/n')
+        delete_recorded_ans=str(input())
+        if delete_recorded_ans == 'y' or delete_recorded_ans == 'Y':
+            self.cleanrecorded = 1
+        else:
+            self.cleanrecorded = 0
+            
         # global configuration
         self.client_id = "kimne78kx3ncx6brgo4mv6wki5h1ko" # Don't change this
-        self.oauth_token = '*********************' # get oauth token value by typing `streamlink --twitch-oauth-authenticate` in terminal
+        self.oauth_token = '*****************' # get oauth token value by typing `streamlink --twitch-oauth-authenticate` in terminal
         self.ffmpeg_path = 'D:\\twitch' # path to ffmpeg.exe
         self.refresh = 1.0 # Time between checking (1.0 is recommended)
         self.root_path = "D:\\twitch" # path to recorded and processed streams
         self.timezone = 3 # UTC timezone
         self.timezoneName = 'Europe/Moscow' # name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
         self.chatdownload = 1 #0 - disable chat downloading, 1 - enable chat downloading
-        self.cleanrecorded = 1 #0 - don't delete processed streams from recorded folder, 1 - delete processed streams from recorded folder
-        self.cmdstate = 1 #0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing
+        self.cmdstate = 2 #0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing
         
         
         # user configuration
@@ -216,7 +223,6 @@ class TwitchRecorder:
 def main(argv):
     twitch_recorder = TwitchRecorder()
     usage_message = 'record.py -u <username> -q <quality>'
-
     try:
         opts, args = getopt.getopt(argv,"hu:q:",["username=","quality="])
     except getopt.GetoptError:
