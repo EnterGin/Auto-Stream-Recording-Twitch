@@ -247,10 +247,10 @@ class TwitchRecorder:
                                 filenameError = 1
                                 print(e)
                                 print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
-                            if self.chatdownload == 1 and filenameError = 0:
+                            if self.chatdownload == 1 and filenameError == 0:
                                 subtitles_window = "cmd.exe /c start".split() + self.cmdstatecommand
                                 subprocess.call(subtitles_window + ["tcd", "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path])
-                            if self.downloadVOD == 1 and filenameError = 0:
+                            if self.downloadVOD == 1 and filenameError == 0:
                                 vod_filename = "VOD_" + filename
                                 vod_window = "cmd.exe /c start".split() + self.cmdstatecommand
                                 subprocess.call(vod_window + ["streamlink", "twitch.tv/videos/" + vod_id, self.quality, "-o", os.path.join(self.recorded_path,vod_filename)])
