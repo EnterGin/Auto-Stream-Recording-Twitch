@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.2.0 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.2.1 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -8,6 +8,7 @@ import sys
 import subprocess
 import datetime
 import getopt
+import pytz
 
 class TwitchRecorder:
     def __init__(self):
@@ -25,11 +26,10 @@ class TwitchRecorder:
         self.ffmpeg_path = r"D:\\twitch" # path to ffmpeg.exe
         self.refresh = 1.0 # Time between checking (1.0 is recommended)
         self.root_path = r"D:\\twitch" # path to recorded and processed streams
-        self.timezone = 3 # UTC timezone
         self.timezoneName = 'Europe/Moscow' # name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
         self.chatdownload = 1 #0 - disable chat downloading, 1 - enable chat downloading
         self.cmdstate = 2 #0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing
-        self.downloadVOD = 0 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
+        self.downloadVOD = 1 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
         
         
         # user configuration
@@ -48,12 +48,13 @@ class TwitchRecorder:
         print('Configuration:')
         print('Root path: ' + self.root_path)
         print('Ffmpeg path: ' + self.ffmpeg_path)
-        print('Timezone: ' + self.timezoneName)
+        self.timezone = int(pytz.timezone(self.timezoneName).localize(datetime.datetime.now()).tzinfo._utcoffset.seconds/60/60)
+        print('Timezone: ' + self.timezoneName + ' ' + '(' + str(self.timezone) + ')')
         if self.chatdownload == 1:
             print('Chat downloading Enabled')
         else:
             print('Chat downloading Disabled')
-        if self.downloadVOD == 1:
+        if self.downloadVOD == 0:
             print('VOD downloading Enabled')
         else:
             print('VOD downloading Disabled')
@@ -205,7 +206,7 @@ class TwitchRecorder:
                 recorded_filename = os.path.join(self.recorded_path, filename)
                 
                 # start streamlink process
-                subprocess.call(["streamlink", "--twitch-disable-hosting", "twitch.tv/" + self.username, self.quality, "-o", recorded_filename])
+                subprocess.call(["streamlink", "--twitch-disable-reruns", "--twitch-disable-hosting", "twitch.tv/" + self.username, self.quality, "-o", recorded_filename])
                 
                 if(os.path.exists(recorded_filename) is True):
                     try:
