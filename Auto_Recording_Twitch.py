@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.2.1 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.2.2 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -206,7 +206,7 @@ class TwitchRecorder:
                 recorded_filename = os.path.join(self.recorded_path, filename)
                 
                 # start streamlink process
-                subprocess.call(["streamlink", "--twitch-disable-reruns", "--twitch-disable-hosting", "twitch.tv/" + self.username, self.quality, "-o", recorded_filename])
+                subprocess.call(["streamlink", "--twitch-disable-hosting", "twitch.tv/" + self.username, self.quality, "-o", recorded_filename])
                 
                 if(os.path.exists(recorded_filename) is True):
                     try:
@@ -247,6 +247,8 @@ class TwitchRecorder:
                                 filename = temp_filename
                                 filenameError = 1
                                 print(e)
+                                error_window = "cmd.exe /c start".split()
+                                subprocess.call(error_window + ['echo', 'An error has occurred. VOD and chat will not be downloaded. Please check them manually.'])
                                 print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
                             if self.chatdownload == 1 and filenameError == 0:
                                 subtitles_window = "cmd.exe /c start".split() + self.cmdstatecommand
