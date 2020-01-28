@@ -6,7 +6,7 @@ Thanks for source script to [junian](https://gist.github.com/junian/b41dd8e544bf
 
 * [Python 3](https://www.python.org/downloads/)
 * [Twitch Chat Downloader](https://github.com/PetterKraabol/Twitch-Chat-Downloader) (optional)
-* [Streamlink](https://github.com/streamlink/streamlink)
+* [Streamlink 1.3.1](https://github.com/streamlink/streamlink)
 * [FFmpeg](http://ffmpeg.org/download.html)
 
 # Features
