@@ -29,7 +29,7 @@ class TwitchRecorder:
         self.timezoneName = 'Europe/Moscow' # name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
         self.chatdownload = 1 #0 - disable chat downloading, 1 - enable chat downloading
         self.cmdstate = 2 #0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing
-        self.downloadVOD = 1 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
+        self.downloadVOD = 0 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
         
         
         # user configuration
@@ -54,7 +54,7 @@ class TwitchRecorder:
             print('Chat downloading Enabled')
         else:
             print('Chat downloading Disabled')
-        if self.downloadVOD == 0:
+        if self.downloadVOD == 1:
             print('VOD downloading Enabled')
         else:
             print('VOD downloading Disabled')
