@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.2.2 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.2.3 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -30,6 +30,7 @@ class TwitchRecorder:
         self.chatdownload = 1 #0 - disable chat downloading, 1 - enable chat downloading
         self.cmdstate = 2 #0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing
         self.downloadVOD = 0 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
+        self.rerun_delete = 1 #0 - disable rerun deleting, 1 - enable rerun deleting
         
         
         # user configuration
@@ -186,6 +187,7 @@ class TwitchRecorder:
 
     def loopcheck(self):
         while True:
+            rerun = 0
             status, info = self.check_user()
             if status == 2:
                 print("Username not found. Invalid username or typo.")
@@ -209,69 +211,89 @@ class TwitchRecorder:
                 subprocess.call(["streamlink", "--twitch-disable-hosting", "twitch.tv/" + self.username, self.quality, "-o", recorded_filename])
                 
                 if(os.path.exists(recorded_filename) is True):
-                    try:
-                        channel_id=info["_id"]
-                        vodurl = 'https://api.twitch.tv/kraken/channels/' + str(channel_id) + '/videos?broadcast_type=archive'
-                        vods = requests.get(vodurl, headers = {"Accept" : 'application/vnd.twitchtv.v5+json', "Client-ID" : self.client_id}, timeout = 1)
-                        vodsinfodic = json.loads(vods.text)
-                        if vodsinfodic["_total"] > 0:
-                            vod_id = vodsinfodic["videos"][0]["_id"]
-                            vod_id = vod_id[:0] + vod_id[1:]
-                            created_at = vodsinfodic["videos"][0]["created_at"]
-                            created_day = present_date
-                            created_time_hour = created_at[11:]
-                            created_time_hour = created_time_hour[:2]
-                            created_time_hourTimezone = int(created_time_hour)+self.timezone
-                            if created_time_hourTimezone >= 24:
-                                created_time_hourTimezone -= 24
-                            elif created_time_hourTimezone < 0:
-                                created_time_hourTimezone += 24
-                            if created_time_hourTimezone < 10:
-                                created_time_hourTimezone = "0" + str(created_time_hourTimezone)
-                            created_time_minutes = created_at[13:]
-                            created_time_minutes = created_time_minutes[:3]
-                            created_time = "(" + str(created_time_hourTimezone) + "-" + created_time_minutes + ")"
-                            processed_stream_folder = created_day + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
-                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                            processed_stream_path = self.processed_path + "/" + processed_stream_folder
-                            if(os.path.isdir(processed_stream_path) is False):
-                                os.makedirs(processed_stream_path)
-                            temp_filename = filename
-                            filename = created_day + "_" + created_time + "_" + vod_id + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
-                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                            filenameError = 0
+                    status, info = self.check_user()
+                    if str(info['broadcaster_software']) == 'watch_party_rerun':
+                        if self.rerun_delete == 1:
+                            os.remove(recorded_filename)
+                            rerun_message = 'be deleted. '
+                        else:
+                            filename = filename[:19] + self.username + "_" + 'RERUN' + ".mp4"
                             try:
                                 os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
                                 recorded_filename = os.path.join(self.recorded_path, filename)
                             except Exception as e:
-                                filename = temp_filename
-                                filenameError = 1
                                 print(e)
-                                error_window = "cmd.exe /c start".split()
-                                subprocess.call(error_window + ['echo', 'An error has occurred. VOD and chat will not be downloaded. Please check them manually.'])
-                                print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
-                            if self.chatdownload == 1 and filenameError == 0:
-                                subtitles_window = "cmd.exe /c start".split() + self.cmdstatecommand
-                                subprocess.call(subtitles_window + ["tcd", "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path])
-                            if self.downloadVOD == 1 and filenameError == 0:
-                                vod_filename = "VOD_" + filename
-                                vod_window = "cmd.exe /c start".split() + self.cmdstatecommand
-                                subprocess.call(vod_window + ["streamlink", "twitch.tv/videos/" + vod_id, self.quality, "-o", os.path.join(self.recorded_path,vod_filename)])
-                        else:
-                            processed_stream_path = self.processed_path + "/" + filename[:-4]
-                            if(os.path.isdir(processed_stream_path) is False):
-                                os.makedirs(processed_stream_path)
-                    except Exception as e:
-                        print(e)
+                            rerun_message = 'not be processed. '
+                        rerun_window = "cmd.exe /c start".split()
+                        subprocess.call(rerun_window + ['echo', 'Rerun detected. Recorded file will ' + rerun_message + 'Please check streams to ensure that it was not a live stream.'])
+                        print('Rerun detected. Recorded file will ' + rerun_message + 'Please check streams to ensure that it was not a live stream.')
+                        rerun = 1
+                    if(os.path.exists(recorded_filename) is True and rerun == 0):
+                        try:
+                            channel_id=info["_id"]
+                            vodurl = 'https://api.twitch.tv/kraken/channels/' + str(channel_id) + '/videos?broadcast_type=archive'
+                            vods = requests.get(vodurl, headers = {"Accept" : 'application/vnd.twitchtv.v5+json', "Client-ID" : self.client_id}, timeout = 1)
+                            vodsinfodic = json.loads(vods.text)
+                            if vodsinfodic["_total"] > 0:
+                                vod_id = vodsinfodic["videos"][0]["_id"]
+                                vod_id = vod_id[:0] + vod_id[1:]
+                                created_at = vodsinfodic["videos"][0]["created_at"]
+                                created_day = present_date
+                                created_time_hour = created_at[11:]
+                                created_time_hour = created_time_hour[:2]
+                                created_time_hourTimezone = int(created_time_hour)+self.timezone
+                                if created_time_hourTimezone >= 24:
+                                    created_time_hourTimezone -= 24
+                                elif created_time_hourTimezone < 0:
+                                    created_time_hourTimezone += 24
+                                if created_time_hourTimezone < 10:
+                                    created_time_hourTimezone = "0" + str(created_time_hourTimezone)
+                                created_time_minutes = created_at[13:]
+                                created_time_minutes = created_time_minutes[:3]
+                                created_time = "(" + str(created_time_hourTimezone) + "-" + created_time_minutes + ")"
+                                processed_stream_folder = created_day + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
+                                processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                processed_stream_path = self.processed_path + "/" + processed_stream_folder
+                                if(os.path.isdir(processed_stream_path) is False):
+                                    os.makedirs(processed_stream_path)
+                                temp_filename = filename
+                                filename = created_day + "_" + created_time + "_" + vod_id + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
+                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                filenameError = 0
+                                try:
+                                    os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
+                                    recorded_filename = os.path.join(self.recorded_path, filename)
+                                except Exception as e:
+                                    filename = temp_filename
+                                    filenameError = 1
+                                    print(e)
+                                    error_window = "cmd.exe /c start".split()
+                                    subprocess.call(error_window + ['echo', 'An error has occurred. VOD and chat will not be downloaded. Please check them manually.'])
+                                    print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
+                                if self.chatdownload == 1 and filenameError == 0:
+                                    subtitles_window = "cmd.exe /c start".split() + self.cmdstatecommand
+                                    subprocess.call(subtitles_window + ["tcd", "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path])
+                                if self.downloadVOD == 1 and filenameError == 0:
+                                    vod_filename = "VOD_" + filename
+                                    vod_window = "cmd.exe /c start".split() + self.cmdstatecommand
+                                    subprocess.call(vod_window + ["streamlink", "twitch.tv/videos/" + vod_id, self.quality, "-o", os.path.join(self.recorded_path,vod_filename)])
+                            else:
+                                processed_stream_path = self.processed_path + "/" + filename[:-4]
+                                if(os.path.isdir(processed_stream_path) is False):
+                                    os.makedirs(processed_stream_path)
+                        except Exception as e:
+                            print(e)
                 
                 print("Recording stream is done. Fixing video file.")
-                if(os.path.exists(recorded_filename) is True):
+                if(os.path.exists(recorded_filename) is True and rerun == 0):
                     try:
                         os.chdir(self.ffmpeg_path)
                         processing_window = "cmd.exe /c start".split() + self.cmdstatecommand
                         subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(processed_stream_path,filename)])
                     except Exception as e:
                         print(e)
+                elif rerun == 1:
+                    print("Skip fixing. File is marked as a rerun.")
                 else:
                     print("Skip fixing. File not found.")
                     
