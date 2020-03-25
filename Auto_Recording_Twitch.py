@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.2.3 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.3.0 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -7,6 +7,7 @@ import json
 import sys
 import subprocess
 import datetime
+from datetime import timedelta
 import getopt
 import pytz
 
@@ -29,8 +30,8 @@ class TwitchRecorder:
         self.timezoneName = 'Europe/Moscow' # name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
         self.chatdownload = 1 #0 - disable chat downloading, 1 - enable chat downloading
         self.cmdstate = 2 #0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing
-        self.downloadVOD = 0 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
-        self.rerun_delete = 1 #0 - disable rerun deleting, 1 - enable rerun deleting
+        self.downloadVOD = 1 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
+        self.rerun_delete = 0 #0 - disable rerun deleting, 1 - enable rerun deleting
         
         
         # user configuration
@@ -238,26 +239,25 @@ class TwitchRecorder:
                                 vod_id = vodsinfodic["videos"][0]["_id"]
                                 vod_id = vod_id[:0] + vod_id[1:]
                                 created_at = vodsinfodic["videos"][0]["created_at"]
-                                created_day = present_date
-                                created_time_hour = created_at[11:]
-                                created_time_hour = created_time_hour[:2]
-                                created_time_hourTimezone = int(created_time_hour)+self.timezone
-                                if created_time_hourTimezone >= 24:
-                                    created_time_hourTimezone -= 24
-                                elif created_time_hourTimezone < 0:
-                                    created_time_hourTimezone += 24
-                                if created_time_hourTimezone < 10:
-                                    created_time_hourTimezone = "0" + str(created_time_hourTimezone)
-                                created_time_minutes = created_at[13:]
-                                created_time_minutes = created_time_minutes[:3]
-                                created_time = "(" + str(created_time_hourTimezone) + "-" + created_time_minutes + ")"
-                                processed_stream_folder = created_day + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
+                                VOD_year = int(created_at[:4])
+                                VOD_month = int(created_at[5:7])
+                                VOD_day = int(created_at[8:10])
+                                VOD_hour = int(created_at[11:13])
+                                VOD_minute = int(created_at[14:16])
+                                
+                                VOD_date = datetime.datetime(VOD_year, VOD_month, VOD_day, VOD_hour, VOD_minute)
+                                
+                                VOD_date_tz = VOD_date + timedelta(hours=self.timezone)   
+                                
+                                processed_stream_folder = VOD_date_tz.strftime("%Y%m%d") + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
                                 processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                
                                 processed_stream_path = self.processed_path + "/" + processed_stream_folder
+                                
                                 if(os.path.isdir(processed_stream_path) is False):
                                     os.makedirs(processed_stream_path)
                                 temp_filename = filename
-                                filename = created_day + "_" + created_time + "_" + vod_id + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
+                                filename = VOD_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + vodsinfodic["videos"][0]["title"] + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
                                 filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                                 filenameError = 0
                                 try:
