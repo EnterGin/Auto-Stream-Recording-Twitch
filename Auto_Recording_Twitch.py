@@ -30,8 +30,8 @@ class TwitchRecorder:
         self.timezoneName = 'Europe/Moscow' # name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
         self.chatdownload = 1 #0 - disable chat downloading, 1 - enable chat downloading
         self.cmdstate = 2 #0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing
-        self.downloadVOD = 1 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
-        self.rerun_delete = 0 #0 - disable rerun deleting, 1 - enable rerun deleting
+        self.downloadVOD = 0 #0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
+        self.rerun_delete = 1 #0 - disable rerun deleting, 1 - enable rerun deleting
         
         
         # user configuration
