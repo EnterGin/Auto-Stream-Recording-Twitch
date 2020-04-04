@@ -283,7 +283,7 @@ class TwitchRecorder:
                                 if(os.path.isdir(processed_stream_path) is False):
                                     os.makedirs(processed_stream_path)
                         except Exception as e:
-                            processed_stream_path = self.processed_path + "/" + filename[:-4]
+                            processed_stream_path = self.processed_path + "/" + filename[:9] + filename[19:-4]
                             if(os.path.isdir(processed_stream_path) is False):
                                     os.makedirs(processed_stream_path)
                             print(e)
