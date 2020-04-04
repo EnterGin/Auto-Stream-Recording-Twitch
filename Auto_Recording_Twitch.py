@@ -1,4 +1,4 @@
-#Auto Stream Recording Twitch v1.3.0 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+#Auto Stream Recording Twitch v1.3.1 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 import requests
 import os
@@ -114,6 +114,7 @@ class TwitchRecorder:
                         os.remove(recorded_filename)                    
                 elif f[11] == 'h':
                     dirname = f[:-4]
+                    dirname = dirname[:9] + dirname[19:]
                     dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                     stream_dir_path = self.processed_path + '/' + dirname
                     if(os.path.isdir(stream_dir_path) is False):
@@ -282,6 +283,9 @@ class TwitchRecorder:
                                 if(os.path.isdir(processed_stream_path) is False):
                                     os.makedirs(processed_stream_path)
                         except Exception as e:
+                            processed_stream_path = self.processed_path + "/" + filename[:-4]
+                            if(os.path.isdir(processed_stream_path) is False):
+                                    os.makedirs(processed_stream_path)
                             print(e)
                 
                 print("Recording stream is done. Fixing video file.")
