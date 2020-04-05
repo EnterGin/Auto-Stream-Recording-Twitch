@@ -50,7 +50,7 @@ class TwitchRecorder:
         print('Configuration:')
         print('Root path: ' + self.root_path)
         print('Ffmpeg path: ' + self.ffmpeg_path)
-        self.timezone = int(pytz.timezone(self.timezoneName).localize(datetime.datetime.now()).tzinfo._utcoffset.seconds/60/60)
+        self.timezone = pytz.timezone(self.timezoneName).localize(datetime.datetime.now()).tzinfo._utcoffset.seconds/60/60
         print('Timezone: ' + self.timezoneName + ' ' + '(' + str(self.timezone) + ')')
         if self.chatdownload == 1:
             print('Chat downloading Enabled')
