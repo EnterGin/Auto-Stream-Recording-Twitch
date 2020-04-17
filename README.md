@@ -23,4 +23,4 @@ Thanks for source script to [junian](https://gist.github.com/junian/b41dd8e544bf
 3. Download ffmpeg
 4. Download script and open it using [notepad++](https://notepad-plus-plus.org/downloads/) (it is much better)
 5. Change options to preferred
-6. You can also use this script using command line: "Auto_Recording_Twitch.py -v (user) -q (quality)"
+6. You can also use this script using command line: ```Auto_Recording_Twitch.py -u <username> -q <quality> -v <download VOD 1/0>```
