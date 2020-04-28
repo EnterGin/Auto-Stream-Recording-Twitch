@@ -226,7 +226,9 @@ class TwitchRecorder:
             if e.response != None:
                 if e.response.reason == 'Not Found' or e.response.reason == 'Unprocessable Entity':
                     status = 1
-
+            else:
+                print(f'\n{e}\n')
+                
         return status, info
 
     def loopcheck(self):
@@ -433,14 +435,54 @@ class TwitchRecorder:
                                     vod_window = "cmd.exe /c start".split() + self.cmdstatecommand
                                     subprocess.call(vod_window + ["streamlink", "twitch.tv/videos/" + vod_id, self.quality, "-o", os.path.join(self.recorded_path,vod_filename)])
                             else:
+                                stream_title = str(info['status'])
+                                stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                
+                                if self.short_folder == 1:
+                                    processed_stream_folder = present_date
+                                else:
+                                    processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
+                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                
                                 if self.make_stream_folder == 1:
-                                    processed_stream_path = self.processed_path + "/" + filename[:8]
+                                    processed_stream_path = self.processed_path + "/" + processed_stream_folder
                                 else:
                                     processed_stream_path = self.processed_path
+                                
+                                if len(os.path.join(processed_stream_path, filename)) >= 260:
+                                    long_title_window = "cmd.exe /c start".split()
+                                    if self.short_folder == 1 or self.make_stream_folder == 0:
+                                        difference = len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 242
+                                    else:
+                                        difference = int((2*len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 242)/2)
+                                    if difference < 0:
+                                        subprocess.call(long_title_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.'])
+                                        uncrop = 1
+                                    else:
+                                        stream_title = stream_title[:difference]
+                                        filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                        
+                                        if self.short_folder == 1:
+                                            processed_stream_folder = present_date
+                                        else:
+                                            processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
+                                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                        
+                                        if self.make_stream_folder == 1:
+                                            processed_stream_path = self.processed_path + "/" + processed_stream_folder
+                                        else:
+                                            processed_stream_path = self.processed_path
+
                                 if(os.path.isdir(processed_stream_path) is False):
-                                    os.makedirs(processed_stream_path)
-                                    
+                                        os.makedirs(processed_stream_path)
+                                        
+                                os.rename(recorded_filename,os.path.join(self.recorded_path, filename))        
+                                recorded_filename = os.path.join(self.recorded_path, filename)
                                 processed_filename = os.path.join(processed_stream_path, filename)
+                                
                         except Exception as e:
                             stream_title = str(info['status'])
                             stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
@@ -483,9 +525,9 @@ class TwitchRecorder:
                                     else:
                                         processed_stream_path = self.processed_path
 
-                            
                             if(os.path.isdir(processed_stream_path) is False):
                                     os.makedirs(processed_stream_path)
+                                    
                             os.rename(recorded_filename,os.path.join(self.recorded_path, filename))        
                             recorded_filename = os.path.join(self.recorded_path, filename)
                             processed_filename = os.path.join(processed_stream_path, filename)
@@ -509,7 +551,7 @@ class TwitchRecorder:
 
 def main(argv):
     twitch_recorder = TwitchRecorder()
-    usage_message = 'record.py -u <username> -q <quality> -v <download VOD 1/0>'
+    usage_message = 'Auto_Recording_Twitch.py -u <username> -q <quality> -v <download VOD 1/0>'
     try:
         opts, args = getopt.getopt(argv,"hu:q:v:",["username=","quality=", "vod="])
     except getopt.GetoptError:
