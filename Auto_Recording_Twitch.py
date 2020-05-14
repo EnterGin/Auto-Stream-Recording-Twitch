@@ -1,5 +1,8 @@
 #Auto Stream Recording Twitch v1.5.0 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
+# Please install latest development build of streamlink for proper work of the script
+# https://github.com/streamlink/streamlink/actions?query=event%3Aschedule+is%3Asuccess+branch%3Amaster
+
 import requests
 import os
 import time
