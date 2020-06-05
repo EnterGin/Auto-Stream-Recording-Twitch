@@ -75,20 +75,6 @@ class TwitchRecorder:
             self.debug_cmd = "--loglevel trace".split()
         else:
             self.debug_cmd = "".split()
-            
-        # get user id
-        url    = 'https://api.twitch.tv/kraken/users?login=' + self.username
-        try:
-            r = requests.get(url, headers = {"Accept" : "application/vnd.twitchtv.v5+json","Client-ID" : self.client_id}, timeout = 15)
-            r.raise_for_status()
-            info = r.json()
-            if info["_total"] > 0:
-                self.channel_id     = info["users"][0]["_id"]
-                self.user_not_found = 0
-            else:
-                self.user_not_found = 1
-        except requests.exceptions.RequestException as e:
-            print(f'\n{e}\n')
 
         # start text
         print('Auto Stream Recording Twitch v1.5.0')
@@ -104,6 +90,9 @@ class TwitchRecorder:
             print('VOD downloading Enabled')
         else:
             print('VOD downloading Disabled')
+
+        # get user id
+        self.get_channel_id()
 
         # path to recorded stream
         self.recorded_path = os.path.join(self.root_path, "recorded", self.username)
@@ -241,13 +230,30 @@ class TwitchRecorder:
         print("Checking for", self.username, "every", self.refresh, "seconds. Record with", self.quality, "quality.")
         self.loopcheck()
 
+    def get_channel_id(self):
+        self.getting_id_error = 0
+        self.user_not_found   = 0
+
+        url    = 'https://api.twitch.tv/kraken/users?login=' + self.username
+        try:
+            r = requests.get(url, headers = {"Accept" : "application/vnd.twitchtv.v5+json","Client-ID" : self.client_id}, timeout = 15)
+            r.raise_for_status()
+            info = r.json()
+            if info["_total"] > 0:
+                self.channel_id     = info["users"][0]["_id"]
+            else:
+                self.user_not_found = 1
+        except requests.exceptions.RequestException as e:
+            self.getting_id_error = 1
+            print(f'\n{e}\n')
+
     def check_user(self):
         # 0: online, 
         # 1: not found, 
         # 2: error
         
         info   = None
-        if self.user_not_found != 1:
+        if self.user_not_found != 1 and self.getting_id_error != 1:
             url    = 'https://api.twitch.tv/kraken/channels/' + str(self.channel_id)
             status = 2
             try:
@@ -257,8 +263,12 @@ class TwitchRecorder:
                 status = 0
             except requests.exceptions.RequestException as e:
                 print(f'\n{e}\n')
-        else:
+        elif self.user_not_found == 1:
             status = 1
+        else:
+            time.sleep(self.refresh)
+            self.get_channel_id()
+            status = 2
 
         return status, info
 
