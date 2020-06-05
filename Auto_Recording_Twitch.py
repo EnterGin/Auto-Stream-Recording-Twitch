@@ -75,6 +75,20 @@ class TwitchRecorder:
             self.debug_cmd = "--loglevel trace".split()
         else:
             self.debug_cmd = "".split()
+            
+        # get user id
+        url    = 'https://api.twitch.tv/kraken/users?login=' + self.username
+        try:
+            r = requests.get(url, headers = {"Accept" : "application/vnd.twitchtv.v5+json","Client-ID" : self.client_id}, timeout = 15)
+            r.raise_for_status()
+            info = r.json()
+            if info["_total"] > 0:
+                self.channel_id     = info["users"][0]["_id"]
+                self.user_not_found = 0
+            else:
+                self.user_not_found = 1
+        except requests.exceptions.RequestException as e:
+            print(f'\n{e}\n')
 
         # start text
         print('Auto Stream Recording Twitch v1.5.0')
@@ -231,21 +245,20 @@ class TwitchRecorder:
         # 0: online, 
         # 1: not found, 
         # 2: error
-
-        url    = 'https://api.twitch.tv/kraken/channels/' + self.username
+        
         info   = None
-        status = 2
-        try:
-            r = requests.get(url, headers = {"Client-ID" : self.client_id}, timeout = 15)
-            r.raise_for_status()
-            info   = r.json()
-            status = 0
-        except requests.exceptions.RequestException as e:
-            if e.response != None:
-                if e.response.reason == 'Not Found' or e.response.reason == 'Unprocessable Entity':
-                    status = 1
-            else:
+        if self.user_not_found != 1:
+            url    = 'https://api.twitch.tv/kraken/channels/' + str(self.channel_id)
+            status = 2
+            try:
+                r = requests.get(url, headers = {"Accept" : "application/vnd.twitchtv.v5+json","Client-ID" : self.client_id}, timeout = 15)
+                r.raise_for_status()
+                info   = r.json()
+                status = 0
+            except requests.exceptions.RequestException as e:
                 print(f'\n{e}\n')
+        else:
+            status = 1
 
         return status, info
 
@@ -264,10 +277,10 @@ class TwitchRecorder:
                 stream_title = str(info['status'])
                 stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
-                filename = datetime.datetime.now().strftime("%Y%m%d_%Hh%Mm%Ss") + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
-
                 present_date     = datetime.datetime.now().strftime("%Y%m%d")
                 present_datetime = datetime.datetime.now().strftime("%Y%m%d_%Hh%Mm%Ss")
+
+                filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
 
                 # clean filename from unecessary characters
                 filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
@@ -281,7 +294,7 @@ class TwitchRecorder:
                         uncrop = 1
                     else:
                         stream_title      = stream_title[:difference]
-                        filename          = datetime.datetime.now().strftime("%Y%m%d_%Hh%Mm%Ss") + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                        filename          = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
                         filename          = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                         recorded_filename = os.path.join(self.recorded_path, filename)
 
@@ -308,9 +321,7 @@ class TwitchRecorder:
                         rerun = 1
                     if(os.path.exists(recorded_filename) is True and rerun == 0):
                         try:
-                            channel_id = info["_id"]
-
-                            vodurl      = 'https://api.twitch.tv/kraken/channels/' + str(channel_id) + '/videos?broadcast_type=archive'
+                            vodurl      = 'https://api.twitch.tv/kraken/channels/' + str(self.channel_id) + '/videos?broadcast_type=archive'
                             vods        = requests.get(vodurl, headers = {"Accept" : 'application/vnd.twitchtv.v5+json', "Client-ID" : self.client_id}, timeout = 5)
                             vodsinfodic = json.loads(vods.text)
 
