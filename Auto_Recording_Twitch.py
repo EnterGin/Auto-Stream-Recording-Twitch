@@ -250,7 +250,8 @@ class TwitchRecorder:
     def check_user(self):
         # 0: online, 
         # 1: not found, 
-        # 2: error
+        # 2: error,
+        # 3: channel id error
         
         info   = None
         if self.user_not_found != 1 and self.getting_id_error != 1:
@@ -266,9 +267,8 @@ class TwitchRecorder:
         elif self.user_not_found == 1:
             status = 1
         else:
-            time.sleep(self.refresh)
             self.get_channel_id()
-            status = 2
+            status = 3
 
         return status, info
 
@@ -282,6 +282,9 @@ class TwitchRecorder:
                 time.sleep(self.refresh)
             elif status == 2:
                 print(datetime.datetime.now().strftime("%Hh%Mm%Ss")," ","unexpected error. Try to check internet connection or client-id. Will try again in", self.refresh, "seconds.")
+                time.sleep(self.refresh)
+            elif status == 3:
+                print(datetime.datetime.now().strftime("%Hh%Mm%Ss")," ","Error while getting channel id. Try to check internet connection or client-id. Will try again in", self.refresh, "seconds.")
                 time.sleep(self.refresh)
             elif status == 0:
                 stream_title = str(info['status'])
