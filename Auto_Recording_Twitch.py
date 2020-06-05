@@ -162,7 +162,7 @@ class TwitchRecorder:
                     else:
                         dirname = f[:9] + f[19:-4]
                         dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                    
+
                     if self.make_stream_folder == 1:
                         stream_dir_path = self.processed_path + '/' + dirname
                     else:
@@ -188,7 +188,7 @@ class TwitchRecorder:
                         subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path,f)])
                     elif self.cleanrecorded == 1:
                         print('Deleting ' + recorded_filename + '.')
-                        os.remove(recorded_filename)                        
+                        os.remove(recorded_filename)
                 else:
                     recorded_filename = os.path.join(self.recorded_path, f)
                     if self.short_folder == 1:
@@ -197,16 +197,16 @@ class TwitchRecorder:
                     else:
                         dirname = f[:8] + f[26:-4]
                         dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                        
+
                     if self.make_stream_folder == 1:
                         stream_dir_path = self.processed_path + '/' + dirname
                     else:
                         stream_dir_path = self.processed_path
-                        
+
                     if len(os.path.join(stream_dir_path, f)) >= 260:
                         long_title_window = "cmd.exe /c start".split()
                         subprocess.call(long_title_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Stream will not be processed, please check root path.'])
-                        too_long_path = 1    
+                        too_long_path = 1
 
                     if(os.path.isdir(stream_dir_path) is False and too_long_path == 0):
                         os.makedirs(stream_dir_path)
@@ -248,11 +248,11 @@ class TwitchRecorder:
             print(f'\n{e}\n')
 
     def check_user(self):
-        # 0: online, 
-        # 1: not found, 
+        # 0: online,
+        # 1: not found,
         # 2: error,
         # 3: channel id error
-        
+
         info   = None
         if self.user_not_found != 1 and self.getting_id_error != 1:
             url    = 'https://api.twitch.tv/kraken/channels/' + str(self.channel_id)
@@ -354,14 +354,14 @@ class TwitchRecorder:
                                 vod_minute = int(created_at[14:16])
 
                                 vod_date    = datetime.datetime(vod_year, vod_month, vod_day, vod_hour, vod_minute)
-                                vod_date_tz = vod_date + timedelta(hours=self.timezone)   
+                                vod_date_tz = vod_date + timedelta(hours=self.timezone)
 
                                 if self.short_folder == 1:
                                     processed_stream_folder = vod_date_tz.strftime("%Y%m%d")
                                 else:
                                     processed_stream_folder = vod_date_tz.strftime("%Y%m%d") + "_" + stream_title + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
                                     processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                                
+
                                 if self.make_stream_folder == 1:
                                     processed_stream_path = self.processed_path + "/" + processed_stream_folder
                                 else:
@@ -463,7 +463,7 @@ class TwitchRecorder:
                                             else:
                                                 processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
                                                 processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                                            
+
                                             if self.make_stream_folder == 1:
                                                 processed_stream_path = self.processed_path + "/" + processed_stream_folder
                                             else:
@@ -491,21 +491,21 @@ class TwitchRecorder:
                             else:
                                 stream_title = str(info['status'])
                                 stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                                
+
                                 filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
                                 filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                                
+
                                 if self.short_folder == 1:
                                     processed_stream_folder = present_date
                                 else:
                                     processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
                                     processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                                
+
                                 if self.make_stream_folder == 1:
                                     processed_stream_path = self.processed_path + "/" + processed_stream_folder
                                 else:
                                     processed_stream_path = self.processed_path
-                                
+
                                 if len(os.path.join(processed_stream_path, filename)) >= 260:
                                     long_title_window = "cmd.exe /c start".split()
 
@@ -537,7 +537,7 @@ class TwitchRecorder:
                                 if(os.path.isdir(processed_stream_path) is False):
                                         os.makedirs(processed_stream_path)
 
-                                os.rename(recorded_filename,os.path.join(self.recorded_path, filename))        
+                                os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
                                 recorded_filename  = os.path.join(self.recorded_path, filename)
                                 processed_filename = os.path.join(processed_stream_path, filename)
 
@@ -581,7 +581,7 @@ class TwitchRecorder:
                                     else:
                                         processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
                                         processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                                    
+
                                     if self.make_stream_folder == 1:
                                         processed_stream_path = self.processed_path + "/" + processed_stream_folder
                                     else:
@@ -590,7 +590,7 @@ class TwitchRecorder:
                             if(os.path.isdir(processed_stream_path) is False):
                                     os.makedirs(processed_stream_path)
 
-                            os.rename(recorded_filename,os.path.join(self.recorded_path, filename))        
+                            os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
                             recorded_filename  = os.path.join(self.recorded_path, filename)
                             processed_filename = os.path.join(processed_stream_path, filename)
 
