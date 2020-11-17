@@ -1,4 +1,4 @@
-# Auto Stream Recording Twitch v1.6.0 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+# Auto Stream Recording Twitch v1.6.8 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
 # Please install latest streamlink release for proper work of the script
 # https://github.com/streamlink/streamlink/releases
@@ -11,23 +11,22 @@ import sys
 import platform
 import subprocess
 import datetime
-from datetime import timedelta
 import getopt
 import pytz
 
 class TwitchRecorder:
     def __init__(self):
         # global configuration
-        self.client_id          = "kimne78kx3ncx6brgo4mv6wki5h1ko" # Don't change this
-        self.ffmpeg_path        = r"D:\\twitch"                    # path to ffmpeg.exe. Leave blank if Linux or ffmpeg in env PATH
+        self.client_id          = ""                               # If you don't have client id then register new app: https://dev.twitch.tv/console/apps
+        self.client_secret      = ""                               # Manage application -> new secret
+        self.ffmpeg_path        = r"D:\\twitch"                    # Path to ffmpeg.exe. Leave blank if Linux or ffmpeg in env PATH
         self.refresh            = 1.0                              # Time between checking (1.0 is recommended)
-        self.root_path          = r"D:\\twitch"                    # path to recorded and processed streams
-        self.timezoneName       = 'Europe/Moscow'                  # name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
+        self.root_path          = r"D:\\twitch"                    # Path to recorded and processed streams
+        self.timezoneName       = 'Europe/Moscow'                  # Name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
         self.chatdownload       = 1                                # 0 - disable chat downloading, 1 - enable chat downloading
         self.cmdstate           = 2                                # Windows: 0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing, 3 - no terminal, do in background
                                                                    # Linux:   0 - not minimazed terminal close after processing, 1 - not minimazed terminal don't close after processing, 2 - no terminal, do in background
         self.downloadVOD        = 0                                # 0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
-        self.rerun_delete       = 1                                # 0 - disable rerun deleting, 1 - enable rerun deleting
         self.dont_ask_to_delete = 0                                # 0 - always ask to delete previous processed streams from recorded folder, 1 - don't ask, don't delete, 2 - don't ask, delete
         self.make_stream_folder = 1                                # 0 - don't make folders for each processed stream, 1 - make folders for each processed stream
         self.short_folder       = 0                                # 0 - date, title, game and username in processed VOD folder, 1 - only date in processed VOD folder
@@ -98,8 +97,14 @@ class TwitchRecorder:
         else:
             self.debug_cmd = "".split()
 
+        if self.client_id == "" or self.client_secret == "":
+            print("If you don't have client-id then register new app on following page:")
+            print("https://dev.twitch.tv/console/apps")
+            print("You have to set both client-id and client-secret.")
+            return
+
         # start text
-        print('Auto Stream Recording Twitch v1.6.0')
+        print('Auto Stream Recording Twitch v1.6.8')
         print('Configuration:')
         print('OS: ' + "Windows " + platform.release() if self.osCheck == 0 else 'OS: ' + "Linux " + platform.release())
         print('Root path: ' + self.root_path)
@@ -113,6 +118,9 @@ class TwitchRecorder:
             print('VOD downloading Enabled')
         else:
             print('VOD downloading Disabled')
+
+        # get oauth token
+        self.oauth_token = self.get_oauth_token()
 
         # get user id
         self.get_channel_id()
@@ -129,11 +137,11 @@ class TwitchRecorder:
         if(os.path.isdir(self.processed_path) is False):
             os.makedirs(self.processed_path)
 
-        # make sure the interval to check user availability is not less than 1 seconds
+        # make sure the interval to check user availability is not less than 1 second
         if(self.refresh < 1):
-            print("Check interval should not be lower than 1 seconds.")
+            print("Check interval should not be lower than 1 second.")
             self.refresh = 1
-            print("System set check interval to 1 seconds.")
+            print("System set check interval to 1 second.")
 
         # Checking for previous files
         try:
@@ -223,18 +231,27 @@ class TwitchRecorder:
 
         print("Checking for", self.username, "every", self.refresh, "seconds. Record with", self.quality, "quality.")
         self.loopcheck()
+    
+    def get_oauth_token(self):
+        try:
+            return requests.post(f"https://id.twitch.tv/oauth2/token"
+                                f"?client_id={self.client_id}"
+                                f"&client_secret={self.client_secret}"
+                                f"&grant_type=client_credentials").json()['access_token']
+        except:
+            return None
 
     def get_channel_id(self):
         self.getting_channel_id_error = 0
         self.user_not_found           = 0
 
-        url = 'https://api.twitch.tv/kraken/users?login=' + self.username
+        url = 'https://api.twitch.tv/helix/users?login=' + self.username
         try:
-            r = requests.get(url, headers = {"Accept" : "application/vnd.twitchtv.v5+json","Client-ID" : self.client_id}, timeout = 15)
+            r = requests.get(url, headers = {"Authorization" : "Bearer " + self.oauth_token, "Client-ID": self.client_id}, timeout = 15)
             r.raise_for_status()
             info = r.json()
-            if info["_total"] > 0:
-                self.channel_id     = info["users"][0]["_id"]
+            if info["data"] != []:
+                self.channel_id = info["data"][0]["id"]
             else:
                 self.user_not_found = 1
         except requests.exceptions.RequestException as e:
@@ -249,19 +266,30 @@ class TwitchRecorder:
 
         info = None
         if self.user_not_found != 1 and self.getting_channel_id_error != 1:
-            url    = 'https://api.twitch.tv/kraken/channels/' + str(self.channel_id)
+            url    = 'https://api.twitch.tv/helix/channels?broadcaster_id=' + str(self.channel_id)
             status = 2
             try:
-                r = requests.get(url, headers = {"Accept" : "application/vnd.twitchtv.v5+json","Client-ID" : self.client_id}, timeout = 15)
+                r = requests.get(url, headers = {"Authorization" : "Bearer " + self.oauth_token, "Client-ID": self.client_id}, timeout = 15)
                 r.raise_for_status()
 
                 info   = r.json()
                 status = 0
             except requests.exceptions.RequestException as e:
-                print(f'\n{e}\n')
+                if r.status_code == 401:
+                    print(
+                        'Request to Twitch returned an error %s, trying to get new oauth_token...'
+                        % (r.status_code)
+                    )
+                    self.getting_channel_id_error = 1
+                else:
+                    print(
+                        'Request to Twitch returned an error %s, the response is:\n%s'
+                        % (r.status_code, r.text)
+                    )
         elif self.user_not_found == 1:
             status = 1
         else:
+            self.oauth_token = self.get_oauth_token()
             self.get_channel_id()
             status = 3
 
@@ -269,26 +297,25 @@ class TwitchRecorder:
 
     def loopcheck(self):
         while True:
-            rerun  = 0
             uncrop = 0
             status, info = self.check_user()
             if status == 1:
                 print("Username not found. Invalid username or typo.")
                 time.sleep(self.refresh)
             elif status == 2:
-                print(datetime.datetime.now().strftime("%Hh%Mm%Ss")," ","unexpected error. Try to check internet connection or client-id. Will try again in", self.refresh, "seconds.")
+                print(datetime.datetime.now().strftime("%Hh%Mm%Ss")," ","Unexpected error. Try to check internet connection or client-id. Will try again in", self.refresh, "seconds.")
                 time.sleep(self.refresh)
             elif status == 3:
-                print(datetime.datetime.now().strftime("%Hh%Mm%Ss")," ","Error while getting channel id. Try to check internet connection or client-id. Will try again in", self.refresh, "seconds.")
+                print(datetime.datetime.now().strftime("%Hh%Mm%Ss")," ","Error with channel id or oauth token. Try to check internet connection or client-id and client-secret. Will try again in", self.refresh, "seconds.")
                 time.sleep(self.refresh)
             elif status == 0:
-                stream_title = str(info['status'])
+                stream_title = str(info["data"][0]['title'])
                 stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                 present_date     = datetime.datetime.now().strftime("%Y%m%d")
                 present_datetime = datetime.datetime.now().strftime("%Y%m%d_%Hh%Mm%Ss")
 
-                filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
 
                 # clean filename from unecessary characters
                 filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
@@ -302,7 +329,7 @@ class TwitchRecorder:
                         uncrop = 1
                     else:
                         stream_title      = stream_title[:difference]
-                        filename          = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                        filename          = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
                         filename          = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                         recorded_filename = os.path.join(self.recorded_path, filename)
 
@@ -311,232 +338,122 @@ class TwitchRecorder:
 
                 if(os.path.exists(recorded_filename) is True):
                     status, info = self.check_user()
-                    if str(info['broadcaster_software']) == 'watch_party_rerun':
-                        if self.rerun_delete == 1:
-                            os.remove(recorded_filename)
-                            rerun_message = 'be deleted. '
-                        else:
-                            filename = filename[:19] + self.username + "_" + 'RERUN' + ".mp4"
-                            try:
-                                os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
-                                recorded_filename = os.path.join(self.recorded_path, filename)
-                            except Exception as e:
-                                print(e)
-                            rerun_message = 'not be processed. '
-                        if self.warning_windows == 1:
-                            if self.osCheck == 0:
-                                subprocess.call(self.main_cmd_window + ['echo', 'Rerun detected. Recorded file will ' + rerun_message + 'Please check streams to ensure that it was not a live stream.'])
+                    try:
+                        vodurl      = 'https://api.twitch.tv/helix/videos?user_id=' + str(self.channel_id) + '&type=archive'
+                        vods        = requests.get(vodurl, headers = {"Authorization" : "Bearer " + self.oauth_token, "Client-ID": self.client_id}, timeout = 5)
+                        vodsinfodic = json.loads(vods.text)
+
+                        if vodsinfodic["data"] != []:
+                            vod_id = vodsinfodic["data"][0]["id"]
+
+                            stream_title = str(vodsinfodic["data"][0]["title"])
+                            stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+
+                            created_at = vodsinfodic["data"][0]["created_at"]
+
+                            vod_year   = int(created_at[:4])
+                            vod_month  = int(created_at[5:7])
+                            vod_day    = int(created_at[8:10])
+                            vod_hour   = int(created_at[11:13])
+                            vod_minute = int(created_at[14:16])
+
+                            vod_date    = datetime.datetime(vod_year, vod_month, vod_day, vod_hour, vod_minute)
+                            vod_date_tz = vod_date + datetime.timedelta(hours=self.timezone)
+
+                            if self.short_folder == 1:
+                                processed_stream_folder = vod_date_tz.strftime("%Y%m%d")
                             else:
-                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Rerun detected. Recorded file will ' + rerun_message + 'Please check streams to ensure that it was not a live stream."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                        print('Rerun detected. Recorded file will ' + rerun_message + 'Please check streams to ensure that it was not a live stream.')
-                        rerun = 1
-                    if(os.path.exists(recorded_filename) is True and rerun == 0):
-                        try:
-                            vodurl      = 'https://api.twitch.tv/kraken/channels/' + str(self.channel_id) + '/videos?broadcast_type=archive'
-                            vods        = requests.get(vodurl, headers = {"Accept" : 'application/vnd.twitchtv.v5+json', "Client-ID" : self.client_id}, timeout = 5)
-                            vodsinfodic = json.loads(vods.text)
+                                processed_stream_folder = vod_date_tz.strftime("%Y%m%d") + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username
+                                processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
-                            if vodsinfodic["_total"] > 0:
-                                vod_id = vodsinfodic["videos"][0]["_id"]
-                                vod_id = vod_id[1:]
+                            if self.make_stream_folder == 1:
+                                processed_stream_path = self.processed_path + "/" + processed_stream_folder
+                            else:
+                                processed_stream_path = self.processed_path
 
-                                stream_title = str(vodsinfodic["videos"][0]["title"])
-                                stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                            filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username + ".mp4"
+                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
-                                created_at = vodsinfodic["videos"][0]["created_at"]
-
-                                vod_year   = int(created_at[:4])
-                                vod_month  = int(created_at[5:7])
-                                vod_day    = int(created_at[8:10])
-                                vod_hour   = int(created_at[11:13])
-                                vod_minute = int(created_at[14:16])
-
-                                vod_date    = datetime.datetime(vod_year, vod_month, vod_day, vod_hour, vod_minute)
-                                vod_date_tz = vod_date + timedelta(hours=self.timezone)
-
-                                if self.short_folder == 1:
-                                    processed_stream_folder = vod_date_tz.strftime("%Y%m%d")
-                                else:
-                                    processed_stream_folder = vod_date_tz.strftime("%Y%m%d") + "_" + stream_title + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
-                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-
-                                if self.make_stream_folder == 1:
-                                    processed_stream_path = self.processed_path + "/" + processed_stream_folder
-                                else:
-                                    processed_stream_path = self.processed_path
-
-                                filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
-                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-
-                                if len(os.path.join(self.recorded_path, filename)) >= 260:
-                                    difference = len(stream_title) - len(os.path.join(self.recorded_path, filename)) + 250
-                                    if difference < 0:
-                                        if self.warning_windows == 1:
-                                            if self.osCheck == 0:
-                                                subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.'])
-                                            else:
-                                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                        print("Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.")
-                                        uncrop = 1
-                                    else:
-                                        stream_title = stream_title[:difference]
-
-                                        filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
-                                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-                                        if self.warning_windows == 1:
-                                            if self.osCheck == 0:
-                                                subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.'])
-                                            else:
-                                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                        print("Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.")
-
-                                if len(os.path.join(processed_stream_path, filename)) >= 260:
-                                    if self.short_folder == 1 or self.make_stream_folder == 0:
-                                        difference = len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 250
-                                    else:
-                                        difference = int((2*len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 250)/2)
-
-                                    if difference < 0:
-                                        if self.warning_windows == 1:
-                                            if self.osCheck == 0:
-                                                subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.'])
-                                            else:
-                                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                        print("Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.")
-                                        uncrop = 1
-                                    else:
-                                        stream_title = stream_title[:difference]
-
-                                        filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username + ".mp4"
-                                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-
-                                        if self.short_folder == 1:
-                                            processed_stream_folder = vod_date_tz.strftime("%Y%m%d")
+                            if len(os.path.join(self.recorded_path, filename)) >= 260:
+                                difference = len(stream_title) - len(os.path.join(self.recorded_path, filename)) + 250
+                                if difference < 0:
+                                    if self.warning_windows == 1:
+                                        if self.osCheck == 0:
+                                            subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.'])
                                         else:
-                                            processed_stream_folder = vod_date_tz.strftime("%Y%m%d") + "_" + stream_title + '_' + vodsinfodic["videos"][0]["game"] + '_' + self.username
-                                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                            subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    print("Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.")
+                                    uncrop = 1
+                                else:
+                                    stream_title = stream_title[:difference]
 
-                                        if self.make_stream_folder == 1:
-                                            processed_stream_path = self.processed_path + "/" + processed_stream_folder
+                                    filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username + ".mp4"
+                                    filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                    if self.warning_windows == 1:
+                                        if self.osCheck == 0:
+                                            subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.'])
                                         else:
-                                            processed_stream_path = self.processed_path
-                                        if self.warning_windows == 1:
-                                            if self.osCheck == 0:
-                                                subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.'])
-                                            else:
-                                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                        print("Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.")
+                                            subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    print("Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.")
 
-                                if(os.path.isdir(processed_stream_path) is False):
-                                    os.makedirs(processed_stream_path)
+                            if len(os.path.join(processed_stream_path, filename)) >= 260:
+                                if self.short_folder == 1 or self.make_stream_folder == 0:
+                                    difference = len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 250
+                                else:
+                                    difference = int((2*len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 250)/2)
 
-                                filenameError = 0
+                                if difference < 0:
+                                    if self.warning_windows == 1:
+                                        if self.osCheck == 0:
+                                            subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.'])
+                                        else:
+                                            subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    print("Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.")
+                                    uncrop = 1
+                                else:
+                                    stream_title = stream_title[:difference]
 
-                                try:
-                                    os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
-                                    recorded_filename  = os.path.join(self.recorded_path, filename)
-                                    processed_filename = os.path.join(processed_stream_path, filename)
-                                except Exception as e:
-                                    stream_title = str(info['status'])
-                                    stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-
-                                    filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                                    filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username + ".mp4"
                                     filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                     if self.short_folder == 1:
-                                        processed_stream_folder = present_date
-                                        processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                        processed_stream_folder = vod_date_tz.strftime("%Y%m%d")
                                     else:
-                                        processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
+                                        processed_stream_folder = vod_date_tz.strftime("%Y%m%d") + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username
                                         processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                     if self.make_stream_folder == 1:
                                         processed_stream_path = self.processed_path + "/" + processed_stream_folder
                                     else:
                                         processed_stream_path = self.processed_path
-
-                                    if len(os.path.join(processed_stream_path, filename)) >= 260:
-                                        if self.short_folder == 1 or self.make_stream_folder == 0:
-                                            difference = len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 242
-                                        else:
-                                            difference = int((2*len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 242)/2)
-
-                                        if difference < 0:
-                                            if self.warning_windows == 1:
-                                                if self.osCheck == 0:
-                                                    subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.'])
-                                                else:
-                                                    subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                            print("Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.")
-                                            uncrop = 1
-                                        else:
-                                            stream_title = stream_title[:difference]
-
-                                            filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
-                                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-
-                                            if self.short_folder == 1:
-                                                processed_stream_folder = present_date
-                                            else:
-                                                processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
-                                                processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
-
-                                            if self.make_stream_folder == 1:
-                                                processed_stream_path = self.processed_path + "/" + processed_stream_folder
-                                            else:
-                                                processed_stream_path = self.processed_path
-
-                                    os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
-                                    recorded_filename  = os.path.join(self.recorded_path, filename)
-                                    processed_filename = os.path.join(processed_stream_path, filename)
-                                    if(os.path.isdir(processed_stream_path) is False):
-                                        os.makedirs(processed_stream_path)
-                                    filenameError = 1
-                                    print(e)
                                     if self.warning_windows == 1:
                                         if self.osCheck == 0:
-                                            subprocess.call(self.main_cmd_window + ['echo', 'An error has occurred. VOD and chat will not be downloaded. Please check them manually.'])
+                                            subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.'])
                                         else:
-                                            subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"An error has occurred. VOD and chat will not be downloaded. Please check them manually."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                    print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
+                                            subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    print("Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.")
 
-                                if self.chatdownload == 1 and filenameError == 0:
-                                    if self.osCheck == 0:
-                                        subtitles_window = self.main_cmd_window + self.cmdstatecommand
-                                        if self.cmdstate == 3:
-                                            subprocess.Popen(['tcd', "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path], stdout=None, stderr=None)
-                                        else:
-                                            subprocess.call(subtitles_window + ['tcd', "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path])
-                                    else:
-                                        if self.cmdstate == 2:
-                                            subprocess.Popen(['tcd', "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path], stdout=None, stderr=None)
-                                        else:
-                                            subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'tcd", "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", '"' + processed_stream_path + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                            if(os.path.isdir(processed_stream_path) is False):
+                                os.makedirs(processed_stream_path)
 
-                                if self.downloadVOD == 1 and filenameError == 0:
-                                    vod_filename = "VOD_" + filename
-                                    if self.osCheck == 0:
-                                        vod_window   = self.main_cmd_window + self.cmdstatecommand
-                                        if self.cmdstate == 3:
-                                            subprocess.Popen(['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
-                                        else:
-                                            subprocess.call(vod_window + ['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)])
-                                    else:
-                                        if self.cmdstate == 2:
-                                            subprocess.Popen(['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
-                                        else:
-                                            subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'streamlink", "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", '"' + os.path.join(self.recorded_path, vod_filename) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                            else:
-                                stream_title = str(info['status'])
+                            filenameError = 0
+
+                            try:
+                                os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
+                                recorded_filename  = os.path.join(self.recorded_path, filename)
+                                processed_filename = os.path.join(processed_stream_path, filename)
+                            except Exception as e:
+                                stream_title = str(info["data"][0]['title'])
                                 stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
-                                filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                                filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
                                 filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                 if self.short_folder == 1:
                                     processed_stream_folder = present_date
+                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
                                 else:
-                                    processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
+                                    processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
                                     processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                 if self.make_stream_folder == 1:
@@ -561,13 +478,13 @@ class TwitchRecorder:
                                     else:
                                         stream_title = stream_title[:difference]
 
-                                        filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                                        filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
                                         filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                         if self.short_folder == 1:
                                             processed_stream_folder = present_date
                                         else:
-                                            processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
+                                            processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
                                             processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                         if self.make_stream_folder == 1:
@@ -575,24 +492,57 @@ class TwitchRecorder:
                                         else:
                                             processed_stream_path = self.processed_path
 
-                                if(os.path.isdir(processed_stream_path) is False):
-                                        os.makedirs(processed_stream_path)
-
                                 os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
                                 recorded_filename  = os.path.join(self.recorded_path, filename)
                                 processed_filename = os.path.join(processed_stream_path, filename)
+                                if(os.path.isdir(processed_stream_path) is False):
+                                    os.makedirs(processed_stream_path)
+                                filenameError = 1
+                                print(e)
+                                if self.warning_windows == 1:
+                                    if self.osCheck == 0:
+                                        subprocess.call(self.main_cmd_window + ['echo', 'An error has occurred. VOD and chat will not be downloaded. Please check them manually.'])
+                                    else:
+                                        subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"An error has occurred. VOD and chat will not be downloaded. Please check them manually."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
 
-                        except Exception as e:
-                            stream_title = str(info['status'])
+                            if self.chatdownload == 1 and filenameError == 0:
+                                if self.osCheck == 0:
+                                    subtitles_window = self.main_cmd_window + self.cmdstatecommand
+                                    if self.cmdstate == 3:
+                                        subprocess.Popen(['tcd', "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path], stdout=None, stderr=None)
+                                    else:
+                                        subprocess.call(subtitles_window + ['tcd', "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path])
+                                else:
+                                    if self.cmdstate == 2:
+                                        subprocess.Popen(['tcd', "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", processed_stream_path], stdout=None, stderr=None)
+                                    else:
+                                        subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'tcd", "-v", vod_id, "--timezone", self.timezoneName, "-f", "irc,ssa,json", "-o", '"' + processed_stream_path + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+                            if self.downloadVOD == 1 and filenameError == 0:
+                                vod_filename = "VOD_" + filename
+                                if self.osCheck == 0:
+                                    vod_window   = self.main_cmd_window + self.cmdstatecommand
+                                    if self.cmdstate == 3:
+                                        subprocess.Popen(['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
+                                    else:
+                                        subprocess.call(vod_window + ['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)])
+                                else:
+                                    if self.cmdstate == 2:
+                                        subprocess.Popen(['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
+                                    else:
+                                        subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'streamlink", "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", '"' + os.path.join(self.recorded_path, vod_filename) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        else:
+                            stream_title = str(info["data"][0]['title'])
                             stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
-                            filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                            filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
                             filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                             if self.short_folder == 1:
                                 processed_stream_folder = present_date
                             else:
-                                processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
+                                processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
                                 processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                             if self.make_stream_folder == 1:
@@ -617,13 +567,13 @@ class TwitchRecorder:
                                 else:
                                     stream_title = stream_title[:difference]
 
-                                    filename = present_datetime + "_" + stream_title + '_' + str(info['game']) + "_" + self.username + ".mp4"
+                                    filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
                                     filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                     if self.short_folder == 1:
                                         processed_stream_folder = present_date
                                     else:
-                                        processed_stream_folder = present_date + "_" + stream_title + '_' + str(info['game']) + "_" + self.username
+                                        processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
                                         processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
 
                                     if self.make_stream_folder == 1:
@@ -638,16 +588,72 @@ class TwitchRecorder:
                             recorded_filename  = os.path.join(self.recorded_path, filename)
                             processed_filename = os.path.join(processed_stream_path, filename)
 
-                            print(e)
-                            if self.warning_windows == 1:
-                                if self.osCheck == 0:
-                                    subprocess.call(self.main_cmd_window + ['echo', 'An error has occurred. VOD and chat will not be downloaded. Please check them manually.'])
+                    except Exception as e:
+                        stream_title = str(info["data"][0]['title'])
+                        stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+
+                        filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
+                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+
+                        if self.short_folder == 1:
+                            processed_stream_folder = present_date
+                        else:
+                            processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
+                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+
+                        if self.make_stream_folder == 1:
+                            processed_stream_path = self.processed_path + "/" + processed_stream_folder
+                        else:
+                            processed_stream_path = self.processed_path
+
+                        if len(os.path.join(processed_stream_path, filename)) >= 260:
+                            if self.short_folder == 1 or self.make_stream_folder == 0:
+                                difference = len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 242
+                            else:
+                                difference = int((2*len(stream_title) - len(os.path.join(processed_stream_path, filename)) + 242)/2)
+
+                            if difference < 0:
+                                if self.warning_windows == 1:
+                                    if self.osCheck == 0:
+                                        subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.'])
+                                    else:
+                                        subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                print("Path to stream is too long. (Max path length is 259 symbols) Title cannot be cropped, please check root path. Stream will not be processed.")
+                                uncrop = 1
+                            else:
+                                stream_title = stream_title[:difference]
+
+                                filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
+                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+
+                                if self.short_folder == 1:
+                                    processed_stream_folder = present_date
                                 else:
-                                    subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"An error has occurred. VOD and chat will not be downloaded. Please check them manually."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                            print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
+                                    processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
+                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+
+                                if self.make_stream_folder == 1:
+                                    processed_stream_path = self.processed_path + "/" + processed_stream_folder
+                                else:
+                                    processed_stream_path = self.processed_path
+
+                        if(os.path.isdir(processed_stream_path) is False):
+                                os.makedirs(processed_stream_path)
+
+                        os.rename(recorded_filename,os.path.join(self.recorded_path, filename))
+                        recorded_filename  = os.path.join(self.recorded_path, filename)
+                        processed_filename = os.path.join(processed_stream_path, filename)
+
+                        print(e)
+                        if self.warning_windows == 1:
+                            if self.osCheck == 0:
+                                subprocess.call(self.main_cmd_window + ['echo', 'An error has occurred. VOD and chat will not be downloaded. Please check them manually.'])
+                            else:
+                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'" + 'echo', '"An error has occurred. VOD and chat will not be downloaded. Please check them manually."; exec bash' + "'"]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        print('An error has occurred. VOD and chat will not be downloaded. Please check them manually.')
 
                 print("Recording stream is done. Fixing video file.")
-                if(os.path.exists(recorded_filename) is True and rerun == 0 and uncrop == 0):
+                if(os.path.exists(recorded_filename) is True and uncrop == 0):
                     try:
                         if self.ffmpeg_path != "" and self.osCheck == 0:
                             os.chdir(self.ffmpeg_path)
@@ -664,8 +670,6 @@ class TwitchRecorder:
                                 subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'ffmpeg", '-y', '-i', '"' + recorded_filename + '"', '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', '"' + processed_filename + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     except Exception as e:
                         print(e)
-                elif rerun == 1:
-                    print("Skip fixing. File is marked as a rerun.")
                 else:
                     print("Skip fixing. File not found.")
 
