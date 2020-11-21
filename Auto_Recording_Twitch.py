@@ -1,7 +1,7 @@
-# Auto Stream Recording Twitch v1.6.8 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
+# Auto Stream Recording Twitch v1.7.0 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
-# Please install latest streamlink release for proper work of the script
-# https://github.com/streamlink/streamlink/releases
+# Please install latest development build of streamlink for proper work of the script
+# https://github.com/streamlink/streamlink/actions?query=event%3Aschedule+is%3Asuccess+branch%3Amaster
 
 import requests
 import os
@@ -14,22 +14,24 @@ import datetime
 import getopt
 import pytz
 
+
 class TwitchRecorder:
     def __init__(self):
         # global configuration
         self.client_id          = ""                               # If you don't have client id then register new app: https://dev.twitch.tv/console/apps
         self.client_secret      = ""                               # Manage application -> new secret
+        self.oauth_tok_private  = ""                               # You can provide your private oauth token and record streams without ads or record sub-only streams (or leave blank if don't need), how to get oauth: https://imgur.com/a/j1Bg6JM
         self.ffmpeg_path        = r"D:\\twitch"                    # Path to ffmpeg.exe. Leave blank if Linux or ffmpeg in env PATH
-        self.refresh            = 1.0                              # Time between checking (1.0 is recommended)
-        self.root_path          = r"D:\\twitch"                    # Path to recorded and processed streams
-        self.timezoneName       = 'Europe/Moscow'                  # Name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
+        self.refresh            = 5.0                              # Time between checking (5.0 is recommended)
+        self.root_path          = r"D:\\twitch"                    # path to recorded and processed streams
+        self.timezoneName       = 'Europe/Moscow'                  # name of timezone (list of timezones: https://stackoverflow.com/questions/13866926/is-there-a-list-of-pytz-timezones)
         self.chatdownload       = 1                                # 0 - disable chat downloading, 1 - enable chat downloading
         self.cmdstate           = 2                                # Windows: 0 - not minimazed cmd close after processing, 1 - minimazed cmd close after processing, 2 - minimazed cmd don't close after processing, 3 - no terminal, do in background
                                                                    # Linux:   0 - not minimazed terminal close after processing, 1 - not minimazed terminal don't close after processing, 2 - no terminal, do in background
         self.downloadVOD        = 0                                # 0 - disable VOD downloading after stream's ending, 1 - enable VOD downloading after stream's ending
         self.dont_ask_to_delete = 0                                # 0 - always ask to delete previous processed streams from recorded folder, 1 - don't ask, don't delete, 2 - don't ask, delete
         self.make_stream_folder = 1                                # 0 - don't make folders for each processed stream, 1 - make folders for each processed stream
-        self.short_folder       = 0                                # 0 - date, title, game and username in processed VOD folder, 1 - only date in processed VOD folder
+        self.short_folder       = 0                                # 0 - only date in processed VOD folder, 1 - date, title, game and username in processed VOD folder
         self.hls_segments       = 3                                # 1-10 for live stream, it's possible to use multiple threads to potentially increase the throughput. 2-3 is enough
         self.hls_segmentsVOD    = 10                               # 1-10 for downloading vod, it's possible to use multiple threads to potentially increase the throughput
         self.streamlink_debug   = 0                                # 0 - don't show streamlink debug, 1 - show streamlink debug
@@ -104,7 +106,7 @@ class TwitchRecorder:
             return
 
         # start text
-        print('Auto Stream Recording Twitch v1.6.8')
+        print('Auto Stream Recording Twitch v1.7.0')
         print('Configuration:')
         print('OS: ' + "Windows " + platform.release() if self.osCheck == 0 else 'OS: ' + "Linux " + platform.release())
         print('Root path: ' + self.root_path)
@@ -195,14 +197,14 @@ class TwitchRecorder:
                         if self.osCheck == 0:
                             processing_window = self.main_cmd_window + self.cmdstatecommand
                             if self.cmdstate == 3:
-                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
+                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
                             else:
-                                subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path, f)])
+                                subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', os.path.join(stream_dir_path, f)])
                         else:
                             if self.cmdstate == 2:
-                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
+                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
                             else:
-                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'ffmpeg", '-y', '-i', '"' + recorded_filename + '"', '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', '"' + os.path.join(stream_dir_path, f) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'ffmpeg", '-y', '-i', '"' + recorded_filename + '"', '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', '"' + os.path.join(stream_dir_path, f) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     except Exception as e:
                         print(e)
                 elif(os.path.exists(os.path.join(stream_dir_path, f)) is False and too_long_path == 0):
@@ -213,14 +215,14 @@ class TwitchRecorder:
                         if self.osCheck == 0:
                             processing_window = self.main_cmd_window + self.cmdstatecommand
                             if self.cmdstate == 3:
-                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
+                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
                             else:
-                                subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path, f)])
+                                subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', os.path.join(stream_dir_path, f)])
                         else:
                             if self.cmdstate == 2:
-                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
+                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', os.path.join(stream_dir_path, f)], stdout=None, stderr=None)
                             else:
-                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'ffmpeg", '-y', '-i', '"' + recorded_filename + '"', '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', '"' + os.path.join(stream_dir_path, f) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'ffmpeg", '-y', '-i', '"' + recorded_filename + '"', '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', '"' + os.path.join(stream_dir_path, f) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     except Exception as e:
                         print(e)
                 elif self.cleanrecorded == 1:
@@ -244,6 +246,9 @@ class TwitchRecorder:
     def get_channel_id(self):
         self.getting_channel_id_error = 0
         self.user_not_found           = 0
+        if self.oauth_token == None:
+            self.getting_channel_id_error = 1
+            return
 
         url = 'https://api.twitch.tv/helix/users?login=' + self.username
         try:
@@ -275,17 +280,20 @@ class TwitchRecorder:
                 info   = r.json()
                 status = 0
             except requests.exceptions.RequestException as e:
-                if r.status_code == 401:
-                    print(
-                        'Request to Twitch returned an error %s, trying to get new oauth_token...'
-                        % (r.status_code)
-                    )
-                    self.getting_channel_id_error = 1
+                if e.response != None:
+                    if e.response.status_code == 401:
+                        print(
+                            '\nRequest to Twitch returned an error %s, trying to get new oauth_token...'
+                            % (e.response.status_code)
+                        )
+                        self.getting_channel_id_error = 1
+                    else:
+                        print(
+                            '\nRequest to Twitch returned an error %s, the response is:\n%s\n'
+                            % (e.response.status_code, e.response)
+                        )
                 else:
-                    print(
-                        'Request to Twitch returned an error %s, the response is:\n%s'
-                        % (r.status_code, r.text)
-                    )
+                    print(f'\n{e}\n')
         elif self.user_not_found == 1:
             status = 1
         else:
@@ -334,10 +342,12 @@ class TwitchRecorder:
                         recorded_filename = os.path.join(self.recorded_path, filename)
 
                 # start streamlink process
-                subprocess.call(["streamlink", "--hls-segment-threads", str(self.hls_segments), "--twitch-disable-hosting", "twitch.tv/" + self.username, self.quality, "--retry-streams", str(self.refresh)] + self.debug_cmd + ["-o", recorded_filename])
+                subprocess.call(["streamlink", '--http-header', 'Authorization=OAuth ' + self.oauth_tok_private, "--hls-segment-threads", str(self.hls_segments), "--hls-live-restart", "--twitch-disable-hosting", "twitch.tv/" + self.username, self.quality, "--retry-streams", str(self.refresh)] + self.debug_cmd + ["-o", recorded_filename])
 
                 if(os.path.exists(recorded_filename) is True):
-                    status, info = self.check_user()
+                    status, info_tmp = self.check_user()
+                    if info_tmp != None:
+                        info = info_tmp
                     try:
                         vodurl      = 'https://api.twitch.tv/helix/videos?user_id=' + str(self.channel_id) + '&type=archive'
                         vods        = requests.get(vodurl, headers = {"Authorization" : "Bearer " + self.oauth_token, "Client-ID": self.client_id}, timeout = 5)
@@ -524,14 +534,14 @@ class TwitchRecorder:
                                 if self.osCheck == 0:
                                     vod_window   = self.main_cmd_window + self.cmdstatecommand
                                     if self.cmdstate == 3:
-                                        subprocess.Popen(['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
+                                        subprocess.Popen(['streamlink', '--http-header', 'Authorization=OAuth ' + self.oauth_tok_private, "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
                                     else:
-                                        subprocess.call(vod_window + ['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)])
+                                        subprocess.call(vod_window + ['streamlink', '--http-header', 'Authorization=OAuth ' + self.oauth_tok_private, "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)])
                                 else:
                                     if self.cmdstate == 2:
-                                        subprocess.Popen(['streamlink', "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
+                                        subprocess.Popen(['streamlink', '--http-header', 'Authorization=OAuth ' + self.oauth_tok_private, "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", os.path.join(self.recorded_path, vod_filename)], stdout=None, stderr=None)
                                     else:
-                                        subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'streamlink", "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", '"' + os.path.join(self.recorded_path, vod_filename) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                        subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'streamlink", '--http-header', 'Authorization=OAuth ' + self.oauth_tok_private, "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", '"' + os.path.join(self.recorded_path, vod_filename) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                         else:
                             stream_title = str(info["data"][0]['title'])
                             stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
@@ -660,14 +670,14 @@ class TwitchRecorder:
                         if self.osCheck == 0:
                             processing_window = self.main_cmd_window + self.cmdstatecommand
                             if self.cmdstate == 3:
-                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', processed_filename], stdout=None, stderr=None)
+                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', processed_filename], stdout=None, stderr=None)
                             else:
-                                subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', processed_filename])
+                                subprocess.call(processing_window + ['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', processed_filename])
                         else:
                             if self.cmdstate == 2:
-                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', processed_filename], stdout=None, stderr=None)
+                                subprocess.Popen(['ffmpeg', '-y', '-i', recorded_filename, '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', processed_filename], stdout=None, stderr=None)
                             else:
-                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'ffmpeg", '-y', '-i', '"' + recorded_filename + '"', '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-start_at_zero', '-copyts', '-bsf:a', 'aac_adtstoasc', '"' + processed_filename + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'ffmpeg", '-y', '-i', '"' + recorded_filename + '"', '-analyzeduration', '2147483647', '-probesize', '2147483647', '-c:v', 'copy', '-c:a', 'copy', '-start_at_zero', '-copyts', '"' + processed_filename + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     except Exception as e:
                         print(e)
                 else:
