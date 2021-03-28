@@ -1,7 +1,7 @@
 # Auto Stream Recording Twitch v1.7.0 https://github.com/EnterGin/Auto-Stream-Recording-Twitch
 
-# Please install latest development build of streamlink for proper work of the script
-# https://github.com/streamlink/streamlink/actions?query=event%3Aschedule+is%3Asuccess+branch%3Amaster
+# Please install latest release build of streamlink for proper work of the script
+# https://github.com/streamlink/streamlink/releases
 
 import requests
 import os
@@ -169,10 +169,10 @@ class TwitchRecorder:
                 recorded_filename = os.path.join(self.recorded_path, f)
                 if self.short_folder == 1:
                     dirname = f[shorta:shortb]
-                    dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                    dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
                 else:
                     dirname = f[longa:longb] + f[longc:-4]
-                    dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                    dirname = "".join(x for x in dirname if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                 if self.make_stream_folder == 1:
                     stream_dir_path = self.processed_path + '/' + dirname
@@ -318,7 +318,7 @@ class TwitchRecorder:
                 time.sleep(self.refresh)
             elif status == 0:
                 stream_title = str(info["data"][0]['title'])
-                stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                 present_date     = datetime.datetime.now().strftime("%Y%m%d")
                 present_datetime = datetime.datetime.now().strftime("%Y%m%d_%Hh%Mm%Ss")
@@ -326,7 +326,7 @@ class TwitchRecorder:
                 filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
 
                 # clean filename from unecessary characters
-                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                 recorded_filename = os.path.join(self.recorded_path, filename)
 
@@ -338,7 +338,7 @@ class TwitchRecorder:
                     else:
                         stream_title      = stream_title[:difference]
                         filename          = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
-                        filename          = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                        filename          = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
                         recorded_filename = os.path.join(self.recorded_path, filename)
 
                 # start streamlink process
@@ -357,7 +357,7 @@ class TwitchRecorder:
                             vod_id = vodsinfodic["data"][0]["id"]
 
                             stream_title = str(vodsinfodic["data"][0]["title"])
-                            stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                            stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                             created_at = vodsinfodic["data"][0]["created_at"]
 
@@ -374,7 +374,7 @@ class TwitchRecorder:
                                 processed_stream_folder = vod_date_tz.strftime("%Y%m%d")
                             else:
                                 processed_stream_folder = vod_date_tz.strftime("%Y%m%d") + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username
-                                processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                             if self.make_stream_folder == 1:
                                 processed_stream_path = self.processed_path + "/" + processed_stream_folder
@@ -382,7 +382,7 @@ class TwitchRecorder:
                                 processed_stream_path = self.processed_path
 
                             filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username + ".mp4"
-                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                             if len(os.path.join(self.recorded_path, filename)) >= 260:
                                 difference = len(stream_title) - len(os.path.join(self.recorded_path, filename)) + 250
@@ -398,7 +398,7 @@ class TwitchRecorder:
                                     stream_title = stream_title[:difference]
 
                                     filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username + ".mp4"
-                                    filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                    filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
                                     if self.warning_windows == 1:
                                         if self.osCheck == 0:
                                             subprocess.call(self.main_cmd_window + ['echo', 'Path to stream is too long. (Max path length is 259 symbols) Title will be cropped, please check root path.'])
@@ -424,13 +424,13 @@ class TwitchRecorder:
                                     stream_title = stream_title[:difference]
 
                                     filename = vod_date_tz.strftime("%Y%m%d_(%H-%M)") + "_" + vod_id + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username + ".mp4"
-                                    filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                    filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                     if self.short_folder == 1:
                                         processed_stream_folder = vod_date_tz.strftime("%Y%m%d")
                                     else:
                                         processed_stream_folder = vod_date_tz.strftime("%Y%m%d") + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + '_' + self.username
-                                        processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                        processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                     if self.make_stream_folder == 1:
                                         processed_stream_path = self.processed_path + "/" + processed_stream_folder
@@ -454,17 +454,17 @@ class TwitchRecorder:
                                 processed_filename = os.path.join(processed_stream_path, filename)
                             except Exception as e:
                                 stream_title = str(info["data"][0]['title'])
-                                stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                 filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
-                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                 if self.short_folder == 1:
                                     processed_stream_folder = present_date
-                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
                                 else:
                                     processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
-                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                 if self.make_stream_folder == 1:
                                     processed_stream_path = self.processed_path + "/" + processed_stream_folder
@@ -489,13 +489,13 @@ class TwitchRecorder:
                                         stream_title = stream_title[:difference]
 
                                         filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
-                                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                         if self.short_folder == 1:
                                             processed_stream_folder = present_date
                                         else:
                                             processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
-                                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                         if self.make_stream_folder == 1:
                                             processed_stream_path = self.processed_path + "/" + processed_stream_folder
@@ -544,16 +544,16 @@ class TwitchRecorder:
                                         subprocess.call(' '.join(self.main_cmd_window + ['bash', '-c', "'streamlink", '--http-header', 'Authorization=OAuth ' + self.oauth_tok_private, "--hls-segment-threads", str(self.hls_segmentsVOD), "twitch.tv/videos/" + vod_id, self.quality] + self.debug_cmd + ["-o", '"' + os.path.join(self.recorded_path, vod_filename) + '"' + self.linuxstatecomma]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                         else:
                             stream_title = str(info["data"][0]['title'])
-                            stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                            stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                             filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
-                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                            filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                             if self.short_folder == 1:
                                 processed_stream_folder = present_date
                             else:
                                 processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
-                                processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                             if self.make_stream_folder == 1:
                                 processed_stream_path = self.processed_path + "/" + processed_stream_folder
@@ -578,13 +578,13 @@ class TwitchRecorder:
                                     stream_title = stream_title[:difference]
 
                                     filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
-                                    filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                    filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                     if self.short_folder == 1:
                                         processed_stream_folder = present_date
                                     else:
                                         processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
-                                        processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                        processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                     if self.make_stream_folder == 1:
                                         processed_stream_path = self.processed_path + "/" + processed_stream_folder
@@ -600,16 +600,16 @@ class TwitchRecorder:
 
                     except Exception as e:
                         stream_title = str(info["data"][0]['title'])
-                        stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                        stream_title = "".join(x for x in stream_title if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                         filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
-                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                        filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                         if self.short_folder == 1:
                             processed_stream_folder = present_date
                         else:
                             processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
-                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                            processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                         if self.make_stream_folder == 1:
                             processed_stream_path = self.processed_path + "/" + processed_stream_folder
@@ -634,13 +634,13 @@ class TwitchRecorder:
                                 stream_title = stream_title[:difference]
 
                                 filename = present_datetime + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username + ".mp4"
-                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                filename = "".join(x for x in filename if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                 if self.short_folder == 1:
                                     processed_stream_folder = present_date
                                 else:
                                     processed_stream_folder = present_date + "_" + stream_title + '_' + str(info["data"][0]['game_name']) + "_" + self.username
-                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"])
+                                    processed_stream_folder = "".join(x for x in processed_stream_folder if x.isalnum() or not x in ["/","\\",":","?","*",'"',">","<","|"]).replace('\n', '')
 
                                 if self.make_stream_folder == 1:
                                     processed_stream_path = self.processed_path + "/" + processed_stream_folder
