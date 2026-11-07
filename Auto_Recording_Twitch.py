@@ -239,7 +239,7 @@ class TwitchRecorder:
             return requests.post(f"https://id.twitch.tv/oauth2/token"
                                 f"?client_id={self.client_id}"
                                 f"&client_secret={self.client_secret}"
-                                f"&grant_type=client_credentials").json()['access_token']
+                                f"&grant_type=client_credentials", timeout=30).json()['access_token']
         except:
             return None
 
